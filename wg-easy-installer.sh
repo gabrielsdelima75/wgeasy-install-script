@@ -28,8 +28,8 @@ fi
 echo "Verificando dependências..."
 
 # Verifica o gerenciador de pacotes
-if command -v apt-get &> /dev/null; then
-  PACKAGE_MANAGER="apt-get"
+if command -v apt &> /dev/null; then
+  PACKAGE_MANAGER="apt"
 elif command -v yum &> /dev/null; then
   PACKAGE_MANAGER="yum"
 elif command -v dnf &> /dev/null; then
@@ -42,8 +42,8 @@ fi
 # Função para instalar pacotes
 install_package() {
   PACKAGE=$1
-  if [ "$PACKAGE_MANAGER" == "apt-get" ]; then
-    apt-get install -y "$PACKAGE"
+  if [ "$PACKAGE_MANAGER" == "apt" ]; then
+    apt install -y "$PACKAGE"
   elif [ "$PACKAGE_MANAGER" == "yum" ]; then
     yum install -y "$PACKAGE"
   elif [ "$PACKAGE_MANAGER" == "dnf" ]; then
@@ -64,11 +64,11 @@ fi
 
 if ! command -v node &> /dev/null; then
   echo "node.js não encontrado. Instalando..."
-  if [ "$PACKAGE_MANAGER" == "apt-get" ]; then
-    curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
+  if [ "$PACKAGE_MANAGER" == "apt" ]; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 
     install_package nodejs
   elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
-    curl -fsSL https://rpm.nodesource.com/setup_16.x | bash -
+    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - 
     install_package nodejs
   fi
 fi
@@ -81,72 +81,81 @@ echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 echo "net.ipv4.conf.all.src_valid_mark=1" >> /etc/sysctl.conf
 sysctl -p
 
+# baixa o arquivo wg-easy.service alterado do nosso repo
+echo "Baixando wg-easy.service..."
+curl -Lo /etc/systemd/system/wg-easy.service https://raw.githubusercontent.com/gabrielsdelima75/wgeasy-install-script/main/wg-easy.service
+
 # Clona o repositório wg-easy
 echo "Baixando o wg-easy..."
 git clone https://github.com/wg-easy/wg-easy
 cd wg-easy || exit
 
-git checkout production
+# coisas do node
 mv src /app
 cd /app || exit
 
 npm ci --omit=dev
 cp -r node_modules ..
 
-# Configura firewall
-echo "Detectando firewall em uso..."
+# Solicita as variáveis de configuração
+echo "Digite o idioma para o Web UI (opções: pt, en, ua, ru, tr, no, pl, fr, de, ca, es, ko, vi, nl, is, chs, cht, it, th, hi, ja, si): "
+read -p "Idioma (default: pt): " LANG
+LANG=${LANG:-pt}
 
-# Verifica qual firewall está sendo usado
-if systemctl is-active --quiet ufw; then
-  FIREWALL="ufw"
-elif systemctl is-active --quiet firewalld; then
-  FIREWALL="firewalld"
+echo "Digite o endereço público ou IP do servidor (WG_HOST): "
+read -p "IP público (default: REPLACEME): " WG_HOST
+WG_HOST=${WG_HOST:-REPLACEME}
+
+echo "Digite a senha para a interface do Web UI (ou deixe em branco para não usar senha): "
+read -sp "Senha: " PASSWORD
+echo
+if [ -n "$PASSWORD" ]; then
+  PASSWORD_HASH=$(node -e "console.log(require('crypto').createHash('sha256').update('$PASSWORD').digest('hex'))")
 else
-  FIREWALL="iptables"
+  PASSWORD_HASH=""
 fi
 
-# Função para configurar o firewall
-configure_firewall() {
-  if [ "$FIREWALL" == "ufw" ]; then
-    echo "Configuração do UFW..."
-    ufw allow 51821/tcp # Web UI
-    ufw allow 51820/udp # WireGuard
-  elif [ "$FIREWALL" == "firewalld" ]; then
-    echo "Configuração do Firewalld..."
-    firewall-cmd --zone=public --add-port=51821/tcp --permanent # Web UI
-    firewall-cmd --zone=public --add-port=51820/udp --permanent # WireGuard
-    firewall-cmd --reload
-  else
-    echo "Configuração do iptables..."
-    iptables -A INPUT -p tcp --dport 51821 -j ACCEPT # Web UI
-    iptables -A INPUT -p udp --dport 51820 -j ACCEPT # WireGuard
-    service iptables save # Salva as regras no iptables
-  fi
-}
+# Solicita o DNS para os clientes (opção de personalizar)
+echo "Digite os servidores DNS para os clientes (default: 1.1.1.1, 1.0.0.1): "
+read -p "DNS (default: 1.1.1.1, 1.0.0.1): " WG_DEFAULT_DNS
+WG_DEFAULT_DNS=${WG_DEFAULT_DNS:-"1.1.1.1, 1.0.0.1"}
 
-# Chama a função para configurar o firewall
-configure_firewall
+# Solicita a porta do painel Web UI
+echo "Digite a porta TCP para o Web UI (default: 51821): "
+read -p "Porta (default: 51821): " PORT
+PORT=${PORT:-51821}
 
-# Retorna para o diretório anterior
-cd - || exit
+# Solicita a porta UDP para a VPN
+echo "Digite a porta UDP para o serviço WireGuard (default: 51820): "
+read -p "Porta UDP (default: 51820): " WG_PORT
+WG_PORT=${WG_PORT:-51820}
 
-# Baixa o arquivo de serviço wg-easy
-echo "Baixando o arquivo de serviço wg-easy.service..."
-curl -Lo /etc/systemd/system/wg-easy.service https://raw.githubusercontent.com/wg-easy/wg-easy/production/wg-easy.service
+# Solicita o dispositivo de rede
+echo "Digite o dispositivo de rede para encaminhar o tráfego WireGuard (default: eth0): "
+read -p "Dispositivo de rede (default: eth0): " WG_DEVICE
+WG_DEVICE=${WG_DEVICE:-eth0}
 
-# Solicita a senha e gera a hash
-read -sp "Digite a senha para a interface do Web UI: " PASSWORD
-echo
-PASSWORD_HASH=$(node -e "console.log(require('crypto').createHash('sha256').update('$PASSWORD').digest('hex'))")
+# Solicita a MTU
+echo "Digite o valor da MTU para os clientes (default: 1420): "
+read -p "MTU (default: 1420): " WG_MTU
+WG_MTU=${WG_MTU:-1420}
+
+# Solicita os IPs permitidos
+echo "Digite os IPs permitidos para os clientes (default: 0.0.0.0/0, ::/0): "
+read -p "IPs permitidos (default: 0.0.0.0/0, ::/0): " WG_ALLOWED_IPS
+WG_ALLOWED_IPS=${WG_ALLOWED_IPS:-"0.0.0.0/0,::/0"}
 
 # Substitui as variáveis no arquivo wg-easy.service
 echo "Configurando o wg-easy.service..."
 sed -i "s|Environment=\"PASSWORD=REPLACEME\"|Environment=\"PASSWORD_HASH=${PASSWORD_HASH}\"|g" /etc/systemd/system/wg-easy.service
-
-# Adiciona variáveis de ambiente LANG e WG_DEFAULT_DNS
-echo "Adicionando variáveis de ambiente..."
-sed -i '/\[Service\]/a Environment="LANG=pt"' /etc/systemd/system/wg-easy.service
-sed -i '/\[Service\]/a Environment="WG_DEFAULT_DNS=8.8.8.8,8.8.4.4"' /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"LANG=pt\"|Environment=\"LANG=${LANG}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"WG_HOST=REPLACEME\"|Environment=\"WG_HOST=${WG_HOST}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"WG_DEFAULT_DNS=8.8.8.8,8.8.4.4\"|Environment=\"WG_DEFAULT_DNS=${WG_DEFAULT_DNS}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"PORT=51821\"|Environment=\"PORT=${PORT}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"WG_PORT=51820\"|Environment=\"WG_PORT=${WG_PORT}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"WG_DEVICE=ens1\"|Environment=\"WG_DEVICE=${WG_DEVICE}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"WG_MTU=1420\"|Environment=\"WG_MTU=${WG_MTU}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"WG_ALLOWED_IPS=0.0.0.0/0,::/0\"|Environment=\"WG_ALLOWED_IPS=${WG_ALLOWED_IPS}\"|g" /etc/systemd/system/wg-easy.service
 
 # Configura o serviço
 echo "Habilitando e iniciando o serviço wg-easy..."
