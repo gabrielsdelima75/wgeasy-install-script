@@ -39,3 +39,37 @@ sudo ufw status
 
 # Verificar firewall (firewalld)
 sudo firewall-cmd --state
+```
+## Como usar o script
+# Passo 1: Baixar o script
+Clone este repositório no seu servidor ou máquina que irá rodar o wg-easy:
+
+```bash
+git clone https://github.com/gabrielsdelima75/wgeasy-install-script.git
+cd wgeasy-install-script
+```
+## Passo 2: Tornar o script executável
+Antes de executar o script, você precisa torná-lo executável:
+
+```bash
+chmod +x install-wg-easy.sh
+```
+
+## Passo 3: Executar o script
+Agora você pode executar o script para instalar e configurar o wg-easy:
+
+```bash
+./install-wg-easy.sh
+```
+O script irá configurar automaticamente as variáveis de ambiente, como o DNS do Google (8.8.8.8 e 8.8.4.4), o idioma (LANG=pt_BR.UTF-8), além de instalar o wg-easy, o WireGuard e configurar o firewall de acordo com a sua configuração (iptables, ufw ou firewalld).
+
+## Passo 4: Acessar a interface web
+Após a instalação, você pode acessar a interface web do wg-easy através do navegador, utilizando o IP ou domínio do seu servidor, na porta configurada (por padrão 51821):
+
+## Passo 5: Definir a senha para a interface web
+O script irá gerar automaticamente uma senha com hash para o acesso à interface web. Caso queira alterar a senha, use o comando abaixo para gerar um novo hash:
+
+```bash
+docker run --rm -it ghcr.io/wg-easy/wg-easy wgpw 'nova_senha'
+Copie a hash gerada e cole no arquivo wg-easy.service na variável PASSWORD_HASH para atualizar a senha.
+```
