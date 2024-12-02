@@ -51,6 +51,18 @@ install_package() {
   fi
 }
 
+#!/bin/bash
+
+# Função para instalar pacotes
+install_package() {
+  local package=$1
+  if [ "$PACKAGE_MANAGER" == "apt" ]; then
+    sudo apt install -y "$package"
+  elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
+    sudo yum install -y "$package"  # ou sudo dnf install -y "$package"
+  fi
+}
+
 # Verifica se curl, git e node.js estão instalados
 if ! command -v curl &> /dev/null; then
   echo "curl não encontrado. Instalando..."
@@ -62,16 +74,39 @@ if ! command -v git &> /dev/null; then
   install_package git
 fi
 
-if ! command -v node &> /dev/null; then
-  echo "node.js não encontrado. Instalando..."
-  if [ "$PACKAGE_MANAGER" == "apt" ]; then
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 
-    install_package nodejs
-  elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
-    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - 
-    install_package nodejs
+# Verificar a versão do Node.js
+if command -v node &> /dev/null; then
+  # Pega a versão do Node.js instalada
+  node_version=$(node -v | sed 's/v//')
+  major_version=$(echo $node_version | cut -d'.' -f1)
+
+  # Se a versão for inferior a 20, remova e instale a versão 20 LTS
+  if [ "$major_version" -lt 20 ]; then
+    echo "Versão do Node.js é inferior à 20, atualizando..."
+    
+    # Remover a versão antiga do Node.js
+    if [ "$PACKAGE_MANAGER" == "apt" ]; then
+      sudo apt-get purge -y nodejs
+      sudo apt-get autoremove -y
+    elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
+      sudo yum remove -y nodejs  # ou sudo dnf remove -y nodejs
+    fi
   fi
+else
+  echo "node.js não encontrado. Instalando..."
 fi
+
+# Instalar a versão 20 LTS do Node.js
+if [ "$PACKAGE_MANAGER" == "apt" ]; then
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  install_package nodejs
+elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
+  curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo -E bash -
+  install_package nodejs
+fi
+
+# Verificar a versão do Node.js após instalação
+node -v
 
 # Verifica se o npm está instalado
 if ! command -v npm &> /dev/null; then
@@ -81,7 +116,7 @@ fi
 
 # Instalar bcrypt como dependência
 echo "Instalando o bcrypt..."
-npm install bcrypt
+npm i bcrypt
 
 echo "Iniciando a instalação do wg-easy..."
 
