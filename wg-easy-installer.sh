@@ -158,7 +158,8 @@ echo
 # Se a senha não for fornecida, deixa o valor do hash vazio
 if [ -n "$PASSWORD" ]; then
   # Gera o hash da senha utilizando o arquivo wgpw-local.js
-  PASSWORD_HASH=$(node wgpw-local.js "$PASSWORD")
+  SCRIPT_DIR=$(dirname "$(realpath "$0")") # Obtém o diretório do script Bash
+  PASSWORD_HASH=$(node "$SCRIPT_DIR/wgpw-local.js" "$PASSWORD")
 else
   PASSWORD_HASH=""
 fi
