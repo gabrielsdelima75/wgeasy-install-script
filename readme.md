@@ -73,3 +73,13 @@ O script irá gerar automaticamente uma senha com hash para o acesso à interfac
 docker run --rm -it ghcr.io/wg-easy/wg-easy wgpw 'nova_senha'
 Copie a hash gerada e cole no arquivo wg-easy.service na variável PASSWORD_HASH para atualizar a senha.
 ```
+
+## Isenção de Responsabilidade
+
+**Este repositório e o script fornecido são fornecidos "como estão", sem garantias de qualquer tipo, expressas ou implícitas, incluindo, mas não se limitando, a garantias de comercialização ou adequação a um propósito específico.**
+
+Ao utilizar este script, **você assume total responsabilidade pela implementação**, configuração e uso do mesmo em seu ambiente. O autor deste repositório não se responsabiliza por danos diretos, indiretos, incidentais, especiais ou consequenciais, incluindo, mas não se limitando, a perda de dados, falhas no sistema ou problemas de rede causados pelo uso deste script.
+
+**Recomenda-se que você faça backup completo de seus dados e configure adequadamente seu ambiente antes de executar o script ou até mesmo revise o script por inteiro.**
+
+Ao utilizar o script, você concorda em isentar o autor e os colaboradores de qualquer responsabilidade legal, financeira ou técnica relacionada ao uso deste software.
