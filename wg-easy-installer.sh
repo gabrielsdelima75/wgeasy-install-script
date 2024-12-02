@@ -60,6 +60,11 @@ if ! command -v git &> /dev/null; then
   install_package git
 fi
 
+if ! command -v wg &> /dev/null; then
+  echo "wireguard-tools não encontrado. Instalando..."
+  install_package wireguard-tools
+fi
+
 # Verificar a versão do Node.js
 if command -v node &> /dev/null; then
   # Pega a versão do Node.js instalada
@@ -220,9 +225,9 @@ echo "Configurando o wg-easy.service..."
 
 # Substitui a senha no arquivo wg-easy.service
 echo "Configurando o wg-easy.service..."
-sed -i "s|Environment=\"PASSWORD_HASH\"|Environment=\"PASSWORD_HASH=${PASSWORD_HASH}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"PASSWORD_HASH=\"|Environment=\"PASSWORD_HASH=${PASSWORD_HASH}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"LANG=pt\"|Environment=\"LANG=${LANG}\"|g" /etc/systemd/system/wg-easy.service
-sed -i "s|Environment=\"WG_HOST=REPLACEME\"|Environment=\"WG_HOST=${WG_HOST}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"WG_HOST=\"|Environment=\"WG_HOST=${WG_HOST}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_DEFAULT_DNS=8.8.8.8,8.8.4.4\"|Environment=\"WG_DEFAULT_DNS=${WG_DEFAULT_DNS}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"PORT=51821\"|Environment=\"PORT=${PORT}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_PORT=51820\"|Environment=\"WG_PORT=${WG_PORT}\"|g" /etc/systemd/system/wg-easy.service
