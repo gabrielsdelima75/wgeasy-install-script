@@ -16,7 +16,7 @@ Antes de executar o script, verifique se o sistema possui as seguintes dependên
 
 - **curl**
 - **git**
-- **Node.js** (versão >= 12.x)
+- **Node.js** (versão >= 20.x)
 - **iptables**, **ufw** ou **firewalld** (dependendo da configuração do firewall)
 
 ### Como verificar se as dependências estão instaladas
