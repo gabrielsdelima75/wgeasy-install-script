@@ -118,7 +118,7 @@ fi
 echo "Instalando o bcrypt..."
 rm -rf /app /node_modules
 npm cache clean --force
-npm i bcrypt
+npm i bcryptjs
 
 echo "Iniciando a instalação do wg-easy..."
 
@@ -161,22 +161,11 @@ echo
 # Se a senha não for fornecida, deixa o valor do hash vazio
 if [ -n "$PASSWORD" ]; then
   # Gera o hash da senha utilizando bcrypt
-  PASSWORD_HASH=$(node -e "
-  const bcrypt = require('bcrypt');
-  const password = '$PASSWORD';
-  bcrypt.hash(password, 10, (err, hash) => {
-    if (err) {
-      console.error('Erro ao gerar o hash:', err);
-      process.exit(1);
-    } else {
-      console.log(hash);
-      process.exit(0);
-    }
-  });
-  ")
+  PASSWORD_HASH=$(node generateHash.js "$PASSWORD")
 else
   PASSWORD_HASH=""
 fi
+
 
 # Solicita o DNS para os clientes (opção de personalizar)
 echo "Digite os servidores DNS para os clientes (default: 1.1.1.1, 1.0.0.1): "
