@@ -142,17 +142,15 @@ npm ci --omit=dev
 cp -r node_modules ..
 
 # Solicita as variáveis de configuração
-echo "Digite o idioma para o Web UI (opções: pt, en, ua, ru, tr, no, pl, fr, de, ca, es, ko, vi, nl, is, chs, cht, it, th, hi, ja, si): "
-read -p "Idioma (default: pt): " LANG
+read -p "Digite o idioma para o Web UI (opções: pt, en, ua, ru, tr, no, pl, fr, de, ca, es, ko, vi, nl, is, chs, cht, it, th, hi, ja, si) (default: pt): " LANG
 LANG=${LANG:-pt}
 
-echo "Digite o endereço público ou IP do servidor (WG_HOST): "
-read -p "IP público (default: REPLACEME): " WG_HOST
+# Solicita o endereço público ou IP do servidor
+read -p "Digite o endereço público ou IP do servidor (WG_HOST) (default: REPLACEME): " WG_HOST
 WG_HOST=${WG_HOST:-REPLACEME}
 
 # Solicita a senha para a interface do Web UI (ou deixe em branco para não usar senha)
-echo "Digite a senha para a interface do Web UI (ou deixe em branco para não usar senha): "
-read -sp "Senha: " PASSWORD
+read -sp "Digite a senha para a interface do Web UI (ou deixe em branco para não usar senha): " PASSWORD
 echo
 
 # Se a senha não for fornecida, deixa o valor do hash vazio
@@ -168,38 +166,53 @@ if [ -n "$PASSWORD" ]; then
 
   # Gera o hash da senha utilizando o arquivo wgpw-local.js encontrado
   PASSWORD_HASH=$(node "$JS_FILE" "$PASSWORD")
+
+  # Imprime a hash gerada para verificação
+  echo "A hash da senha gerada é: $PASSWORD_HASH"
 else
   PASSWORD_HASH=""
 fi
 
 # Solicita o DNS para os clientes (opção de personalizar)
-echo "Digite os servidores DNS para os clientes (default: 1.1.1.1, 1.0.0.1): "
-read -p "DNS (default: 1.1.1.1, 1.0.0.1): " WG_DEFAULT_DNS
+read -p "Digite os servidores DNS para os clientes (default: 1.1.1.1, 1.0.0.1): " WG_DEFAULT_DNS
 WG_DEFAULT_DNS=${WG_DEFAULT_DNS:-"1.1.1.1, 1.0.0.1"}
 
-# Solicita a porta do painel Web UI
-echo "Digite a porta TCP para o Web UI (default: 51821): "
-read -p "Porta (default: 51821): " PORT
+# Solicita a porta do painel Web UI TCP
+read -p "Digite a porta TCP para o Web UI (default: 51821): " PORT
 PORT=${PORT:-51821}
 
 # Solicita a porta UDP para a VPN
-echo "Digite a porta UDP para o serviço WireGuard (default: 51820): "
-read -p "Porta UDP (default: 51820): " WG_PORT
+read -p "Digite a porta UDP para o serviço WireGuard (default: 51820): " WG_PORT
 WG_PORT=${WG_PORT:-51820}
+
+# Lista os dispositivos de rede disponíveis
+echo "Detectando dispositivos de rede disponíveis..."
+NETWORK_DEVICES=$(ip -o link show | awk -F': ' '{print $2}')
+
+# Exibe os dispositivos disponíveis
+echo "Dispositivos de rede disponíveis:"
+echo "$NETWORK_DEVICES"
 
 # Solicita o dispositivo de rede
 echo "Digite o dispositivo de rede para encaminhar o tráfego WireGuard (default: eth0): "
-read -p "Dispositivo de rede (default: eth0): " WG_DEVICE
+select WG_DEVICE in $NETWORK_DEVICES; do
+  if [ -n "$WG_DEVICE" ]; then
+    echo "Você selecionou o dispositivo: $WG_DEVICE"
+    break
+  else
+    echo "Seleção inválida, tente novamente."
+  fi
+done
+
+# Define o dispositivo de rede, usando 'eth0' como padrão caso nenhum dispositivo seja selecionado
 WG_DEVICE=${WG_DEVICE:-eth0}
 
 # Solicita a MTU
-echo "Digite o valor da MTU para os clientes (default: 1420): "
-read -p "MTU (default: 1420): " WG_MTU
+read -p "Digite o valor da MTU para os clientes (default: 1420): " WG_MTU
 WG_MTU=${WG_MTU:-1420}
 
 # Solicita os IPs permitidos
-echo "Digite os IPs permitidos para os clientes (default: 0.0.0.0/0, ::/0): "
-read -p "IPs permitidos (default: 0.0.0.0/0, ::/0): " WG_ALLOWED_IPS
+read -p "Digite os IPs permitidos para os clientes (default: 0.0.0.0/0, ::/0): " WG_ALLOWED_IPS
 WG_ALLOWED_IPS=${WG_ALLOWED_IPS:-"0.0.0.0/0,::/0"}
 
 # Substitui as variáveis no arquivo wg-easy.service
@@ -207,7 +220,7 @@ echo "Configurando o wg-easy.service..."
 
 # Substitui a senha no arquivo wg-easy.service
 echo "Configurando o wg-easy.service..."
-sed -i "s|Environment=\"PASSWORD=REPLACEME\"|Environment=\"PASSWORD_HASH=${PASSWORD_HASH}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"PASSWORD_HASH\"|Environment=\"PASSWORD_HASH=${PASSWORD_HASH}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"LANG=pt\"|Environment=\"LANG=${LANG}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_HOST=REPLACEME\"|Environment=\"WG_HOST=${WG_HOST}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_DEFAULT_DNS=8.8.8.8,8.8.4.4\"|Environment=\"WG_DEFAULT_DNS=${WG_DEFAULT_DNS}\"|g" /etc/systemd/system/wg-easy.service
