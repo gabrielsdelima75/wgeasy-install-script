@@ -1,0 +1,44 @@
+[Unit]
+Description=Wireguard VPN + Web-based Admin UI
+After=network-online.target nss-lookup.target
+
+[Service]
+# Endereço público ou IP estático do host
+Environment="WG_HOST=REPLACEME" # Substitua pelo seu IP público ou endereço do host
+# Defina a hash da senha para acessar o Web UI, ou deixe em branco para sem senha
+Environment="PASSWORD_HASH=REPLACEME" # Deixe em branco ou adicione um hash para senha
+# Definir o idioma da interface do Web UI (pt é o padrão)
+Environment="LANG=pt" # Opções válidas: en, ua, ru, tr, no, pl, fr, de, ca, es, ko, vi, nl, is, pt, chs, cht, it, th, hi, ja, si
+
+# Faixa de IP dos clientes (caso necessário, descomente e configure)
+#Environment="WG_DEFAULT_ADDRESS=10.0.8.x" # Faixa de IP dos clientes
+
+# DNS dos clientes. O padrão é Cloudflare (1.1.1.1), mas pode ser alterado conforme necessário
+Environment="WG_DEFAULT_DNS=1.1.1.1, 1.0.0.1" # Padrão: Cloudflare DNS (1.1.1.1)
+
+# IPs permitidos para os clientes. O padrão é permitir todo o tráfego (0.0.0.0/0, ::/0)
+Environment="WG_ALLOWED_IPS=0.0.0.0/0,::/0" # Permite todos os IPs por padrão, modifique conforme necessário
+
+# Dispositivo de rede para encaminhar o tráfego WireGuard. Padrão é "eth0". Verifique a lista de interfaces de rede
+Environment="WG_DEVICE=eth0" # Modifique para o dispositivo correto caso necessário. Veja a lista de interfaces disponíveis no servidor
+
+# Porta do Web UI. O padrão é 51821, mas pode ser alterado durante a instalação
+Environment="PORT=51821" # Porta TCP para o Web UI
+
+# Porta UDP usada pelo WireGuard para tráfego de dados. O padrão é 51820
+Environment="WG_PORT=51820" # Porta UDP do WireGuard
+
+# MTU para os clientes. O padrão é 1420, mas pode ser alterado conforme necessidade
+Environment="WG_MTU=1420" # MTU padrão sugerido para os clientes
+
+# Intervalo para manter a conexão aberta. Padrão é 25 segundos, ajuste se necessário
+#Environment="WG_PERSISTENT_KEEPALIVE=25" # Intervalo para manter a conexão aberta
+
+Type=simple
+RemainAfterExit=no
+ExecStart=/usr/bin/env node /app/server.js
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
