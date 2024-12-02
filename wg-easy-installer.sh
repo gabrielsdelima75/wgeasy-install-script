@@ -73,6 +73,16 @@ if ! command -v node &> /dev/null; then
   fi
 fi
 
+# Verifica se o npm está instalado
+if ! command -v npm &> /dev/null; then
+  echo "npm não encontrado. Instalando..."
+  install_package npm
+fi
+
+# Instalar bcrypt como dependência
+echo "Instalando o bcrypt..."
+npm install bcrypt
+
 echo "Iniciando a instalação do wg-easy..."
 
 # Habilita o encaminhamento de pacotes IP
@@ -81,7 +91,7 @@ echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 echo "net.ipv4.conf.all.src_valid_mark=1" >> /etc/sysctl.conf
 sysctl -p
 
-# baixa o arquivo wg-easy.service alterado do nosso repo
+# Baixa o arquivo wg-easy.service alterado do nosso repo
 echo "Baixando wg-easy.service..."
 curl -Lo /etc/systemd/system/wg-easy.service https://raw.githubusercontent.com/gabrielsdelima75/wgeasy-install-script/main/wg-easy.service
 
@@ -90,7 +100,7 @@ echo "Baixando o wg-easy..."
 git clone https://github.com/wg-easy/wg-easy
 cd wg-easy || exit
 
-# coisas do node
+# Coisas do Node
 mv src /app
 cd /app || exit
 
@@ -106,11 +116,27 @@ echo "Digite o endereço público ou IP do servidor (WG_HOST): "
 read -p "IP público (default: REPLACEME): " WG_HOST
 WG_HOST=${WG_HOST:-REPLACEME}
 
+# Solicita a senha para a interface do Web UI (ou deixe em branco para não usar senha)
 echo "Digite a senha para a interface do Web UI (ou deixe em branco para não usar senha): "
 read -sp "Senha: " PASSWORD
 echo
+
+# Se a senha não for fornecida, deixa o valor do hash vazio
 if [ -n "$PASSWORD" ]; then
-  PASSWORD_HASH=$(node -e "console.log(require('crypto').createHash('sha256').update('$PASSWORD').digest('hex'))")
+  # Gera o hash da senha utilizando bcrypt
+  PASSWORD_HASH=$(node -e "
+  const bcrypt = require('bcrypt');
+  const password = '$PASSWORD';
+  bcrypt.hash(password, 10, (err, hash) => {
+    if (err) {
+      console.error('Erro ao gerar o hash:', err);
+      process.exit(1);
+    } else {
+      console.log(hash);
+      process.exit(0);
+    }
+  });
+  ")
 else
   PASSWORD_HASH=""
 fi
@@ -147,6 +173,9 @@ WG_ALLOWED_IPS=${WG_ALLOWED_IPS:-"0.0.0.0/0,::/0"}
 
 # Substitui as variáveis no arquivo wg-easy.service
 echo "Configurando o wg-easy.service..."
+
+# Substitui a senha no arquivo wg-easy.service
+echo "Configurando o wg-easy.service..."
 sed -i "s|Environment=\"PASSWORD=REPLACEME\"|Environment=\"PASSWORD_HASH=${PASSWORD_HASH}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"LANG=pt\"|Environment=\"LANG=${LANG}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_HOST=REPLACEME\"|Environment=\"WG_HOST=${WG_HOST}\"|g" /etc/systemd/system/wg-easy.service
@@ -157,9 +186,11 @@ sed -i "s|Environment=\"WG_DEVICE=ens1\"|Environment=\"WG_DEVICE=${WG_DEVICE}\"|
 sed -i "s|Environment=\"WG_MTU=1420\"|Environment=\"WG_MTU=${WG_MTU}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_ALLOWED_IPS=0.0.0.0/0,::/0\"|Environment=\"WG_ALLOWED_IPS=${WG_ALLOWED_IPS}\"|g" /etc/systemd/system/wg-easy.service
 
-# Configura o serviço
-echo "Habilitando e iniciando o serviço wg-easy..."
+# Configura o serviço para iniciar automaticamente
+echo "Habilitando e iniciando o serviço..."
 systemctl daemon-reload
-systemctl enable --now wg-easy.service
+systemctl enable wg-easy
+systemctl start wg-easy
 
-echo "Instalação do wg-easy concluída com sucesso!"
+# Concluído
+echo "Instalação concluída! O serviço WireGuard Easy está funcionando."
