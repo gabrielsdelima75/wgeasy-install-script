@@ -116,6 +116,8 @@ fi
 
 # Instalar bcrypt como dependência
 echo "Instalando o bcrypt..."
+rm -rf /app /node_modules
+npm cache clean --force
 npm i bcrypt
 
 echo "Iniciando a instalação do wg-easy..."
