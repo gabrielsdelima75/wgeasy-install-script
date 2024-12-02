@@ -172,10 +172,6 @@ else
   PASSWORD_HASH=""
 fi
 
-else
-  PASSWORD_HASH=""
-fi
-
 # Solicita o DNS para os clientes (opção de personalizar)
 echo "Digite os servidores DNS para os clientes (default: 1.1.1.1, 1.0.0.1): "
 read -p "DNS (default: 1.1.1.1, 1.0.0.1): " WG_DEFAULT_DNS
