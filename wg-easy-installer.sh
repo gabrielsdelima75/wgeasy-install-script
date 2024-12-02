@@ -190,6 +190,41 @@ PORT=${PORT:-51821}
 read -p "Digite a porta UDP para o serviço WireGuard (default: 51820): " WG_PORT
 WG_PORT=${WG_PORT:-51820}
 
+# Chama a função para liberar as portas no firewall
+liberar_portas_firewall $PORT $WG_PORT
+
+# Função para liberar as portas no iptables, ufw ou firewalld
+liberar_portas_firewall() {
+  local porta_tcp=$1
+  local porta_udp=$2
+
+  # Verifica qual firewall está em uso
+  if command -v ufw &> /dev/null; then
+    # Se o ufw estiver instalado
+    echo "Liberando portas no UFW..."
+    ufw allow $porta_tcp/tcp
+    ufw allow $porta_udp/udp
+    ufw reload
+  elif command -v firewall-cmd &> /dev/null; then
+    # Se o firewalld estiver instalado
+    echo "Liberando portas no Firewalld..."
+    firewall-cmd --zone=public --add-port=$porta_tcp/tcp --permanent
+    firewall-cmd --zone=public --add-port=$porta_udp/udp --permanent
+    firewall-cmd --reload
+  elif command -v iptables &> /dev/null; then
+    # Se o iptables estiver instalado
+    echo "Liberando portas no iptables..."
+    iptables -A INPUT -p tcp --dport $porta_tcp -j ACCEPT
+    iptables -A INPUT -p udp --dport $porta_udp -j ACCEPT
+    # Salva as regras no iptables (dependendo da distribuição)
+    if command -v iptables-save &> /dev/null; then
+      iptables-save > /etc/iptables/rules.v4
+    fi
+  else
+    echo "Nenhum firewall detectado (ufw, firewalld ou iptables). Não foi possível liberar as portas."
+  fi
+}
+
 # Lista os dispositivos de rede disponíveis
 echo "Detectando dispositivos de rede disponíveis..."
 NETWORK_DEVICES=$(ip -o link show | awk -F': ' '{print $2}')
@@ -241,4 +276,4 @@ systemctl daemon-reload
 systemctl enable wg-easy
 systemctl start wg-easy
 
-echo "wg-easy instalado e funcionando!"
+echo "wg-easy instalado!"
