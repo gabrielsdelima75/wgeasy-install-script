@@ -43,23 +43,9 @@ fi
 install_package() {
   PACKAGE=$1
   if [ "$PACKAGE_MANAGER" == "apt" ]; then
-    apt install -y "$PACKAGE"
-  elif [ "$PACKAGE_MANAGER" == "yum" ]; then
-    yum install -y "$PACKAGE"
-  elif [ "$PACKAGE_MANAGER" == "dnf" ]; then
-    dnf install -y "$PACKAGE"
-  fi
-}
-
-#!/bin/bash
-
-# Função para instalar pacotes
-install_package() {
-  local package=$1
-  if [ "$PACKAGE_MANAGER" == "apt" ]; then
-    sudo apt install -y "$package"
+    sudo apt install -y "$PACKAGE"
   elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
-    sudo yum install -y "$package"  # ou sudo dnf install -y "$package"
+    sudo yum install -y "$PACKAGE"  # ou sudo dnf install -y "$PACKAGE"
   fi
 }
 
@@ -98,10 +84,10 @@ fi
 
 # Instalar a versão 20 LTS do Node.js
 if [ "$PACKAGE_MANAGER" == "apt" ]; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - 
   install_package nodejs
 elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
-  curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo -E bash -
+  curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo -E bash - 
   install_package nodejs
 fi
 
@@ -114,10 +100,22 @@ if ! command -v npm &> /dev/null; then
   install_package npm
 fi
 
-# Instalar bcrypt como dependência
-echo "Instalando o bcrypt..."
+# evitando problemas desnecessários
 rm -rf /app /node_modules
-npm i bcryptjs
+
+# Instalar bcryptjs e readline-sync como dependências
+echo "Verificando e instalando dependências do npm..."
+
+# Instalar bcryptjs e readline-sync se não estiverem instalados
+if ! npm list bcryptjs &> /dev/null; then
+  echo "Instalando bcryptjs..."
+  npm i bcryptjs
+fi
+
+if ! npm list readline-sync &> /dev/null; then
+  echo "Instalando readline-sync..."
+  npm i readline-sync
+fi
 
 echo "Iniciando a instalação do wg-easy..."
 
@@ -159,21 +157,8 @@ echo
 
 # Se a senha não for fornecida, deixa o valor do hash vazio
 if [ -n "$PASSWORD" ]; then
-
-# Gera o hash da senha utilizando bcryptjs
-  PASSWORD_HASH=$(node -e "
-  const bcrypt = require('bcryptjs');
-  const password = '$PASSWORD';
-  bcrypt.hash(password, 10, (err, hash) => {
-    if (err) {
-      console.error('Erro ao gerar o hash:', err);
-      process.exit(1);
-    } else {
-      console.log(hash);
-      process.exit(0);
-    }
-  });
-  ")
+  # Gera o hash da senha utilizando o arquivo wgpw-local.js
+  PASSWORD_HASH=$(node wgpw-local.js "$PASSWORD")
 else
   PASSWORD_HASH=""
 fi
@@ -219,15 +204,14 @@ sed -i "s|Environment=\"WG_HOST=REPLACEME\"|Environment=\"WG_HOST=${WG_HOST}\"|g
 sed -i "s|Environment=\"WG_DEFAULT_DNS=8.8.8.8,8.8.4.4\"|Environment=\"WG_DEFAULT_DNS=${WG_DEFAULT_DNS}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"PORT=51821\"|Environment=\"PORT=${PORT}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_PORT=51820\"|Environment=\"WG_PORT=${WG_PORT}\"|g" /etc/systemd/system/wg-easy.service
-sed -i "s|Environment=\"WG_DEVICE=ens1\"|Environment=\"WG_DEVICE=${WG_DEVICE}\"|g" /etc/systemd/system/wg-easy.service
+sed -i "s|Environment=\"WG_DEVICE=eth0\"|Environment=\"WG_DEVICE=${WG_DEVICE}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_MTU=1420\"|Environment=\"WG_MTU=${WG_MTU}\"|g" /etc/systemd/system/wg-easy.service
 sed -i "s|Environment=\"WG_ALLOWED_IPS=0.0.0.0/0,::/0\"|Environment=\"WG_ALLOWED_IPS=${WG_ALLOWED_IPS}\"|g" /etc/systemd/system/wg-easy.service
 
-# Configura o serviço para iniciar automaticamente
-echo "Habilitando e iniciando o serviço..."
+# Inicia o serviço do wg-easy
+echo "Iniciando o serviço wg-easy..."
 systemctl daemon-reload
 systemctl enable wg-easy
 systemctl start wg-easy
 
-# Concluído
-echo "Instalação concluída! O serviço WireGuard Easy está funcionando."
+echo "wg-easy instalado e funcionando!"
