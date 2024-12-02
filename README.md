@@ -7,7 +7,7 @@ Este repositório contém um script Bash para automatizar a instalação do **wg
 - Instala o **wg-easy** e suas dependências.
 - Configura o **WireGuard VPN** com uma interface web para fácil gerenciamento.
 - Suporta firewall **iptables**, **ufw** e **firewalld**.
-- Configurações de rede como `WG_DEFAULT_DNS` (com DNS do Google: 8.8.8.8 e 8.8.4.4) e `LANG` (configurado para `pt_BR.UTF-8`).
+- Configurações de rede como `WG_DEFAULT_DNS` (com DNS da CloudFlare) e `LANG` (configurado para `pt`).
 - Personalização da senha de acesso à interface web, utilizando a hash gerada automaticamente.
 
 ## Requisitos
@@ -16,8 +16,10 @@ Antes de executar o script, verifique se o sistema possui as seguintes dependên
 
 - **curl**
 - **git**
-- **Node.js** (versão >= 20.x)
+- **wireguard-tools**
 - **iptables**, **ufw** ou **firewalld** (dependendo da configuração do firewall)
+- **Node.js** (versão >= 20.x)
+- **Dependêcias node: bcryptjs e readline-sync**
 
 ### Como verificar se as dependências estão instaladas
 
@@ -70,7 +72,7 @@ Após a instalação, você pode acessar a interface web do wg-easy através do 
 O script irá gerar automaticamente uma senha com hash para o acesso à interface web. Caso queira alterar a senha, use o comando abaixo para gerar um novo hash:
 
 ```bash
-docker run --rm -it ghcr.io/wg-easy/wg-easy wgpw 'nova_senha'
+node wgpw-local.js 'nova_senha'
 Copie a hash gerada e cole no arquivo wg-easy.service na variável PASSWORD_HASH para atualizar a senha.
 ```
 
